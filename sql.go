@@ -15,12 +15,17 @@
 package main
 
 const (
-	CreatePlayerSQL      = "INSERT INTO player (id, coins, goods) VALUES (?, ?, ?)"
-	GetPlayerSQL         = "SELECT id, coins, goods FROM player WHERE id = ?"
-	GetCountSQL          = "SELECT count(*) FROM player"
-	GetPlayerWithLockSQL = GetPlayerSQL + " FOR UPDATE"
-	UpdatePlayerSQL      = "UPDATE player set goods = goods + ?, coins = coins + ? WHERE id = ?"
-	GetPlayerByLimitSQL  = "SELECT id, coins, goods FROM player LIMIT ?"
-	DropTableSQL         = "DROP TABLE IF EXISTS player"
-	CreateTableSQL       = "CREATE TABLE player ( `id` VARCHAR(36), `coins` INTEGER, `goods` INTEGER, PRIMARY KEY (`id`) );"
+	CreateLogSQL                 = "INSERT INTO logs (level, message, resourceId, timestamp, traceId, spanId, commit, parentResourceId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	CreateLogsTableSQL           = "CREATE TABLE logs (`level` VARCHAR(100), `message` VARCHAR(100), `resourceId` VARCHAR(100), `timestamp` VARCHAR(100), `traceId` VARCHAR(100), `spanId` VARCHAR(100), `commit` VARCHAR(100), `parentResourceId` VARCHAR(100));"
+	FetchFeatureDistinctValues   = "SELECT DISTINCT ? FROM logs"
+	FetchAllLogs                 = "SELECT * FROM logs"
+	DropLogsTableSQL             = "DROP TABLE IF EXISTS logs"
+	// CreatePlayerSQL        = "INSERT INTO player (id, coins, goods) VALUES (?, ?, ?)"
+	// GetPlayerSQL           = "SELECT id, coins, goods FROM player WHERE id = ?"
+	// GetCountSQL            = "SELECT count(*) FROM player"
+	// GetPlayerWithLockSQL   = GetPlayerSQL + " FOR UPDATE"
+	// UpdatePlayerSQL        = "UPDATE player set goods = goods + ?, coins = coins + ? WHERE id = ?"
+	// GetPlayerByLimitSQL    = "SELECT id, coins, goods FROM player LIMIT ?"
+	// DropTableSQL           = "DROP TABLE IF EXISTS player"
+	// CreateTableSQL         = "CREATE TABLE player ( `id` VARCHAR(36), `coins` INTEGER, `goods` INTEGER, PRIMARY KEY (`id`) );"
 )

@@ -13,12 +13,13 @@
 // limitations under the License.
 
 package main
+import "github.com/gin-gonic/gin"
+
 
 import (
 	"database/sql"
 	"fmt"
 	"os"
-
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -26,82 +27,127 @@ import (
 func main() {
 	// Configure the example database connection.
 	openDB("mysql", func(db *sql.DB) {
-		// 1. recreate the table.
-		recreateTable(db)
+		r := gin.Default()
 
-		// 2. Run some simple examples.
-		simpleExample(db)
+		r.GET("/fetchAll", func(c *gin.Context) {
+			allLogs, err := queryLogs(db, FetchAllLogs)
+			if err != nil {
+				panic(err)
+			}
+			for index, log := range allLogs {
+				fmt.Printf("print %d log: %+v\n", index+1, log)
+			}
+			c.JSON(200, allLogs)
+		})
 
-		// 3. Getting further.
-		tradeExample(db)
+
+		r.POST("/getOptions", func(c *gin.Context) {
+			var featureMap map[string]string
+			c.BindJSON(&featureMap)
+			var feature string 
+			feature = featureMap["feature"]
+			options, err := getOptions(db, feature)
+			if err != nil {
+				panic(err)
+			}
+			c.JSON(200, options)
+		})
+
+		r.POST("/createLog", func(c *gin.Context) {
+			var recievedlog Log
+			c.BindJSON(&recievedlog)
+		    createLog(db, recievedlog)
+			fmt.Printf("Log created: %v\n", recievedlog)
+		})
+
+
+	
+		r.POST("/queryLogs", func(c *gin.Context) {
+			var features map[string]string
+			c.BindJSON(&features)
+			query := "SELECT * FROM logs WHERE"
+			for key, value := range features {
+				query += fmt.Sprintf(" %s = '%s' AND", key, value)
+			}
+			// Remove the last 'AND' from the query string
+			query = query[:len(query)-4]
+			fmt.Println("Generated query:", query)
+
+			FetchedLogs, err := queryLogs(db, query)
+			if err != nil {
+				panic(err)
+			}
+			c.JSON(200, FetchedLogs)
+		})
+	
+		r.Run(":3000")
 	})
 }
 
-func simpleExample(db *sql.DB) {
-	// Create a player, who has a coin and a goods.
-	err := createPlayer(db, Player{ID: "test", Coins: 1, Goods: 1})
-	if err != nil {
-		panic(err)
-	}
+// func simpleExample(db *sql.DB) {
+// 	// Create a player, who has a coin and a goods.
+// 	err := createPlayer(db, Player{ID: "test", Coins: 1, Goods: 1})
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	// Get a player.
+// 	testPlayer, err := getPlayer(db, "test")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Printf("getPlayer: %+v\n", testPlayer)
 
-	// Get a player.
-	testPlayer, err := getPlayer(db, "test")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("getPlayer: %+v\n", testPlayer)
+// 	// Create players with bulk inserts. Insert 1919 players totally, with 114 players per batch.
 
-	// Create players with bulk inserts. Insert 1919 players totally, with 114 players per batch.
+// 	err = bulkInsertPlayers(db, randomPlayers(1919), 114)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	err = bulkInsertPlayers(db, randomPlayers(1919), 114)
-	if err != nil {
-		panic(err)
-	}
+// 	// Count players amount.
+// 	playersCount, err := getCount(db)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Printf("countPlayers: %d\n", playersCount)
 
-	// Count players amount.
-	playersCount, err := getCount(db)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("countPlayers: %d\n", playersCount)
+// 	// Print 3 players.
+// 	threePlayers, err := getPlayerByLimit(db, 3)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	for index, player := range threePlayers {
+// 		fmt.Printf("print %d player: %+v\n", index+1, player)
+// 	}
+// }
 
-	// Print 3 players.
-	threePlayers, err := getPlayerByLimit(db, 3)
-	if err != nil {
-		panic(err)
-	}
-	for index, player := range threePlayers {
-		fmt.Printf("print %d player: %+v\n", index+1, player)
-	}
-}
+// func tradeExample(db *sql.DB) {
+// 	// Player 1: id is "1", has only 100 coins.
+// 	// Player 2: id is "2", has 114514 coins, and 20 goods.
+// 	player1 := Player{ID: "1", Coins: 100}
+// 	player2 := Player{ID: "2", Coins: 114514, Goods: 20}
 
-func tradeExample(db *sql.DB) {
-	// Player 1: id is "1", has only 100 coins.
-	// Player 2: id is "2", has 114514 coins, and 20 goods.
-	player1 := Player{ID: "1", Coins: 100}
-	player2 := Player{ID: "2", Coins: 114514, Goods: 20}
+// 	// Create two players "by hand", using the INSERT statement on the backend.
+// 	if err := createPlayer(db, player1); err != nil {
+// 		panic(err)
+// 	}
+// 	if err := createPlayer(db, player2); err != nil {
+// 		panic(err)
+// 	}
 
-	// Create two players "by hand", using the INSERT statement on the backend.
-	if err := createPlayer(db, player1); err != nil {
-		panic(err)
-	}
-	if err := createPlayer(db, player2); err != nil {
-		panic(err)
-	}
+// 	// Player 1 wants to buy 10 goods from player 2.
+// 	// It will cost 500 coins, but player 1 cannot afford it.
+// 	fmt.Println("\nbuyGoods:\n    => this trade will fail")
+// 	if err := buyGoods(db, player2.ID, player1.ID, 10, 500); err == nil {
+// 		panic("there shouldn't be success")
+// 	}
 
-	// Player 1 wants to buy 10 goods from player 2.
-	// It will cost 500 coins, but player 1 cannot afford it.
-	fmt.Println("\nbuyGoods:\n    => this trade will fail")
-	if err := buyGoods(db, player2.ID, player1.ID, 10, 500); err == nil {
-		panic("there shouldn't be success")
-	}
-
-	// So player 1 has to reduce the incoming quantity to two.
-	fmt.Println("\nbuyGoods:\n    => this trade will success")
-	if err := buyGoods(db, player2.ID, player1.ID, 2, 100); err != nil {
-		panic(err)
-	}
-}
+// 	// So player 1 has to reduce the incoming quantity to two.
+// 	fmt.Println("\nbuyGoods:\n    => this trade will success")
+// 	if err := buyGoods(db, player2.ID, player1.ID, 2, 100); err != nil {
+// 		panic(err)
+// 	}
+// }
 
 func openDB(driverName string, runnable func(db *sql.DB)) {
 	db, err := sql.Open(driverName, getDSN())
